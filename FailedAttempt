@@ -1,0 +1,138 @@
+-- Used this tutorial: http://osmstudios.com/tutorials/your-first-love2d-game-in-200-lines-part-1-of-3
+-- Used this tutorial: https://dev.to/jeansberg/make-a-shooter-in-lualove2d---part-1
+-- Collision detection taken from http://love2d.org/wiki/BoundingBox.lua
+
+function love.load()
+    player= {}
+    player.x = 5
+    player.y = -5
+    player.w = 1
+    player.h = 1
+    player.speed = 4
+    bunnyImage = love.graphics.newImage("graphics/bunny.png")
+    
+    bullet = {}
+    enemies = {}
+    
+    isAlive = true
+    bulletTimerMax = 0.2
+    bulletStartSpeed = 100
+    bulletMaxSpeed = 300
+    canFire = false
+    bulletTimer = bulletTimerMax
+    enemyTimerMax = 0.4
+    enemyTimer=enemyTimerMax
+    bulletImage = love.graphics.newImage("graphics/carrot.png")
+    enemyImage = love.graphics.newImage("graphics/fox.png")
+end
+
+function checkCollision(x1,y1,w1,h1, x2,y2,w2,h2)
+    return x1 < x2+w2 and
+           x2 < x1+w1 and 
+           y1 < y2+h2 and
+           y2 < y1+h1
+end 
+    
+function love.update(dt)
+    playerUpdate(dt)
+    bulletUpdate(dt)
+    enemiesUpdate(dt)
+    collisionDetection(dt)
+    isAlive(dt)
+end
+    
+function playerUpdate(dt)
+    if love.keyboard.isDown("right") then
+        player.x = player.x + 5
+    end
+    
+    if love.keyboard.isDown("left") then
+        player.x = player.x - 5
+    end
+    
+    if  love.keyboard.isDown("up") then
+        player.y = player.y - 5
+    end
+    
+    if  love.keyboard.isDown("down") then
+        player.y = player.y + 5
+    end
+end
+
+function bulletUpdate(dt)
+    bulletTimer= bulletTimer - (1*dt)
+    if bulletTimer < 0 then
+        canFire = true
+    end
+
+    for i, bullet in ipairs(bullets) do
+        bullet.y = bullet.y - (250*dt)
+        if bullet.y < 0 then
+            table.remove(bullets, i)
+        end
+    end
+    if love.keyboard.isDown(' ', 'rctrl', 'lctrl', 'ctrl') and canFire then
+        newBullet = {x = player.x + (player.img:getWidth()/2), y = player.y, img=bulletImage}
+        table.insert(bullets,newBullet)
+        canFire = false
+        bulletTimer = bulletTimerMax
+    end
+end
+
+
+function enemiesUpdate(dt)
+    enemyTimer = enemyTimer - (1*dt)
+    if enemyTimer < 0 then
+        enemyTimer = enemyTimerMax
+        randomNumber = math.random(20, love.graphics.getWidth() - 10)
+        newEnemy = {x = randomNumber, y = -10, img = enemyImage}
+        table.insert(enemies, newEnemy)
+    end
+    for i, enemy in ipairs(enemies) do 
+        enemy.y = enemy.y + (200*dt)
+        if enemy.y >850 then
+            table.remove(enemies, i)
+    end
+end
+
+function collisionDetection(dt)
+    for i, enemy in ipairs(enemies) do
+        for j, bullet in ipairs(bullets) do
+            if checkCollision(enemy.x,enemy.img:getWidth(), enemy.img:getHeight(), bullet.x, bullet.y, bullet.img:getWidth(), bullet.img:getHeight()) then
+                table.remove(bullets, j)
+                table.remove(enemies, i)
+            end
+        end
+        if CheckCollision(enemy.x, enemy.y, enemy.img:getWidth(), enemy.img:getHeight(), player.x, player.y, player.img:getWidth(), player.img:getHeight()) and isAlive then
+			table.remove(enemies, i)
+            isAlive = false
+        end
+    end
+end
+
+function isAlive(dt)
+    if not isAlive and love.keyboard.isDown('r') then
+        bullets = {}
+        enemies = {}
+        bulletTimer = bulletTimerMax
+        enemyTimer = enemyTimerMax
+        player.x = 5
+        player.y =-5
+        isAlive = true
+    end
+end
+
+function love.draw()
+    love.graphics.draw(bunnyImage, player.x, player.y, 0, player.w, player.h)
+    for i, bullet in ipairs(bullets) do
+		love.graphics.draw(bullet.img, bullet.x, bullet.y)
+	end
+	for i, enemy in ipairs(enemies) do
+		love.graphics.draw(enemy.img, enemy.x, enemy.y)
+    end
+    if isAlive then
+		love.graphics.draw(player.img, player.x, player.y)
+	else
+		love.graphics.print("Press 'R' to restart", love.graphics:getWidth()/2-50, love.graphics:getHeight()/2-10)
+    end
+end
